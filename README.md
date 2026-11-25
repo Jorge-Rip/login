@@ -251,3 +251,5 @@ Quais relatórios e exportações são necessários e para quais perfis?
 16. Limites da fonte e observações finais
 A imagem permite identificar os campos e as sete situações listadas, mas não informa regras de negócio, permissões, estados do processo, política de retenção, formato de assinatura, estrutura atual do banco ou contratos dos endpoints FastAPI. Por isso, este documento separa o que está explícito no formulário das propostas técnicas. O agente de IA deve tratar as propostas como orientação inicial e confirmar decisões institucionais antes de torná-las obrigatórias.
 Princípio central: evoluir a aplicação existente com o menor impacto possível, preservando a rastreabilidade do registro e garantindo acesso restrito e responsável às informações dos estudantes.
+
+TESTE
