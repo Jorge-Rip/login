@@ -176,6 +176,69 @@ def decode_access_token(token: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 # BANCO DE DADOS SQLITE E TABELAS
 # ---------------------------------------------------------------------------
+DEFAULT_USERS = [
+    {
+        "name": "Administrador Reginato",
+        "email": "admin@escola.sp.gov.br",
+        "password": "admin123",
+        "role": "gestor",
+    },
+    {
+        "name": "Gestor Pedagógico Reginato",
+        "email": "gestor@escola.sp.gov.br",
+        "password": "gestor123",
+        "role": "gestor",
+    },
+    {
+        "name": "Prof. Carlos Eduardo",
+        "email": "professor@escola.sp.gov.br",
+        "password": "professor123",
+        "role": "professor",
+    },
+    {
+        "name": "Diretora Ana Paula",
+        "email": "diretor@escola.sp.gov.br",
+        "password": "diretor123",
+        "role": "diretor",
+    },
+]
+
+ALLOWED_ROLES = {"aluno", "professor", "gestor", "diretor"}
+
+REPORTS_CATALOG = {
+    "saresp": {
+        "id": 1,
+        "codigo": "#REL-01",
+        "slug": "saresp",
+        "titulo": "Desempenho SARESP e Avaliações Diagnósticas 2026",
+        "classificacao": "Restrito à Gestão",
+        "perfis_permitidos": ["gestor", "diretor"],
+        "endpoint": "/api/relatorios/saresp",
+        "descricao": "Consolidado de proficiência em Língua Portuguesa, Matemática e evolução IDESP por série.",
+    },
+    "diario-classe": {
+        "id": 2,
+        "codigo": "#REL-02",
+        "slug": "diario-classe",
+        "titulo": "Diário de Classe & Lançamento de Médias Bimestrais",
+        "classificacao": "Professores / Gestão",
+        "perfis_permitidos": ["professor", "gestor", "diretor"],
+        "endpoint": "/api/relatorios/diario-classe",
+        "descricao": "Acompanhamento de aulas ministradas, frequência por turma e fechamento de médias bimestrais.",
+    },
+    "auditoria-matriculas": {
+        "id": 3,
+        "codigo": "#REL-03",
+        "slug": "auditoria-matriculas",
+        "titulo": "Auditoria de Matrículas e Frequência Escolar",
+        "classificacao": "Exclusivo Diretoria",
+        "perfis_permitidos": ["diretor"],
+        "endpoint": "/api/relatorios/auditoria-matriculas",
+        "descricao": "Conferência de matrículas ativas, transferências, busca ativa escolar e conformidade SED.",
+    },
+}
+
+
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
@@ -183,7 +246,7 @@ def get_db_connection():
 
 
 def init_db():
-    """Inicializa as tabelas do banco de dados e cria usuário padrão se vazio."""
+    """Inicializa as tabelas do banco de dados e garante os usuários padrão pedagógicos."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -198,24 +261,80 @@ def init_db():
             )
         """)
 
-        # Verifica se já existe ao menos 1 usuário
-        cursor.execute("SELECT COUNT(*) AS total FROM users")
-        row = cursor.fetchone()
-        if row["total"] == 0:
-            default_pwd_hash = hash_password("admin123")
-            now_iso = datetime.now(timezone.utc).isoformat()
-            cursor.execute("""
-                INSERT INTO users (name, email, hashed_password, role, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                "Administrador Reginato",
-                "admin@escola.sp.gov.br",
-                default_pwd_hash,
-                "gestor",
-                1,
-                now_iso
-            ))
-            conn.commit()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for default_user in DEFAULT_USERS:
+            cursor.execute("SELECT id FROM users WHERE email = ?", (default_user["email"],))
+            if not cursor.fetchone():
+                cursor.execute("""
+                    INSERT INTO users (name, email, hashed_password, role, is_active, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    default_user["name"],
+                    default_user["email"],
+                    hash_password(default_user["password"]),
+                    default_user["role"],
+                    1,
+                    now_iso,
+                ))
+        conn.commit()
+
+
+def find_user_by_identifier(cursor, identifier: str):
+    """Localiza usuário por e-mail completo ou usuário institucional (ex.: gestor, professor, diretor)."""
+    identifier_clean = identifier.lower().strip()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (identifier_clean,))
+    user = cursor.fetchone()
+    if user or "@" in identifier_clean:
+        return user
+    institutional_email = f"{identifier_clean}@escola.sp.gov.br"
+    cursor.execute("SELECT * FROM users WHERE email = ?", (institutional_email,))
+    return cursor.fetchone()
+
+
+def build_token_response(user: sqlite3.Row) -> dict:
+    """Monta o payload JWT e a resposta padronizada de autenticação."""
+    token_payload = {
+        "sub": str(user["id"]),
+        "email": user["email"],
+        "role": user["role"],
+        "name": user["name"],
+    }
+    token = create_access_token(token_payload)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "is_active": bool(user["is_active"]),
+            "created_at": user["created_at"],
+        },
+    }
+
+
+def authorize_report_access(report_slug: str, current_user: dict) -> dict:
+    """Valida se o perfil do usuário autenticado tem permissão para consultar o relatório."""
+    report = REPORTS_CATALOG[report_slug]
+    user_role = (current_user.get("role") or "").lower().strip()
+    if user_role not in report["perfis_permitidos"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "erro": "Acesso negado por controle de perfil (RBAC).",
+                "codigo_relatorio": report["codigo"],
+                "titulo_relatorio": report["titulo"],
+                "classificacao_exigida": report["classificacao"],
+                "perfis_permitidos": report["perfis_permitidos"],
+                "seu_perfil": user_role,
+                "mensagem": (
+                    f"O perfil '{user_role}' não possui permissão para consultar "
+                    f"o relatório {report['codigo']} ({report['classificacao']})."
+                ),
+            },
+        )
+    return report
 
 
 # ---------------------------------------------------------------------------
@@ -225,7 +344,7 @@ class UserRegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=100, description="Nome completo do usuário")
     email: EmailStr = Field(..., description="E-mail institucional")
     password: str = Field(..., min_length=6, max_length=128, description="Senha de acesso")
-    role: Optional[str] = Field("professor", description="Perfil: professor, aluno ou gestor")
+    role: Optional[str] = Field("professor", description="Perfil: professor, gestor, diretor ou aluno")
 
 
 class UserLoginRequest(BaseModel):
@@ -364,8 +483,24 @@ def get_dados_restritos(current_user: dict = Depends(get_current_user)):
     """
     Endpoint protegido: Requer Token JWT válido no cabeçalho 'Authorization: Bearer <token>'.
     Se acessado diretamente sem token, o FastAPI retorna automaticamente HTTP 401 Unauthorized.
-    Retorna os dados confidenciais pedagógicos (notas, turmas, relatórios).
+    Retorna os dados confidenciais pedagógicos (notas, turmas, relatórios) com permissões por perfil.
     """
+    user_role = (current_user.get("role") or "").lower().strip()
+    relatorios_lista = []
+    for report in REPORTS_CATALOG.values():
+        permitido = user_role in report["perfis_permitidos"]
+        relatorios_lista.append({
+            "id": report["id"],
+            "codigo": report["codigo"],
+            "slug": report["slug"],
+            "titulo": report["titulo"],
+            "classificacao": report["classificacao"],
+            "perfis_permitidos": report["perfis_permitidos"],
+            "endpoint": report["endpoint"],
+            "permitido": permitido,
+            "status": "Disponível" if permitido else "Bloqueado para este Perfil",
+        })
+
     return {
         "status": "autorizado",
         "mensagem": "Acesso concedido com sucesso aos dados confidenciais da EE Antonio Reginato.",
@@ -373,19 +508,125 @@ def get_dados_restritos(current_user: dict = Depends(get_current_user)):
             "id": current_user["id"],
             "nome": current_user["name"],
             "email": current_user["email"],
-            "role": current_user["role"]
+            "role": current_user["role"],
         },
         "dados_sigilosos": {
             "ano_letivo": 2026,
             "escola": "Escola Estadual Antonio Reginato",
             "turmas_ativas": 14,
             "media_geral_escola": 8.4,
-            "relatorios": [
-                {"id": 1, "titulo": "Desempenho SARESP e Avaliações Diagnósticas 2026", "classificacao": "Restrito à Gestão", "status": "Disponível"},
-                {"id": 2, "titulo": "Diário de Classe & Lançamento de Médias Bimestrais", "classificacao": "Professores / Gestão", "status": "Disponível"},
-                {"id": 3, "titulo": "Auditoria de Matrículas e Frequência Escolar", "classificacao": "Exclusivo Diretoria", "status": "Disponível"}
-            ]
-        }
+            "relatorios": relatorios_lista,
+        },
+    }
+
+
+@app.get("/api/relatorios/saresp", tags=["Relatórios Pedagógicos"])
+def get_relatorio_saresp(current_user: dict = Depends(get_current_user)):
+    """
+    #REL-01: Desempenho SARESP e Avaliações Diagnósticas 2026.
+    Classificação: Restrito à Gestão (perfis permitidos: gestor, diretor).
+    """
+    report = authorize_report_access("saresp", current_user)
+    return {
+        "status": "autorizado",
+        "relatorio": report,
+        "consultado_por": {
+            "nome": current_user["name"],
+            "email": current_user["email"],
+            "role": current_user["role"],
+        },
+        "gerado_em": datetime.now(timezone.utc).isoformat(),
+        "resumo": {
+            "participacao_geral": "94,2%",
+            "media_lingua_portuguesa": 8.2,
+            "media_matematica": 8.6,
+            "meta_idesp_2026": "Superada (+0,5)",
+        },
+        "colunas": ["Série / Ano", "Turmas", "Média LP", "Média Mat", "Nível Adequado", "Evolução vs 2025"],
+        "registros": [
+            {"serie": "6º Ano EF", "turmas": "3 salas", "media_lp": "8,1", "media_mat": "8,3", "nivel_adequado": "79%", "evolucao": "+4,2%"},
+            {"serie": "9º Ano EF", "turmas": "4 salas", "media_lp": "8,3", "media_mat": "8,7", "nivel_adequado": "82%", "evolucao": "+5,8%"},
+            {"serie": "1ª Série EM", "turmas": "4 salas", "media_lp": "8,0", "media_mat": "8,5", "nivel_adequado": "77%", "evolucao": "+3,9%"},
+            {"serie": "3ª Série EM", "turmas": "3 salas", "media_lp": "8,5", "media_mat": "8,9", "nivel_adequado": "86%", "evolucao": "+6,1%"},
+        ],
+        "observacoes_pedagogicas": [
+            "Meta SARESP 2026 superada em todas as séries avaliadas no Ensino Fundamental II e Médio.",
+            "Recomenda-se plano de recomposição focalizada em geometria analítica para a 1ª Série EM.",
+            "Dados sintéticos para demonstração pedagógica de autorização RBAC (Restrito à Gestão).",
+        ],
+    }
+
+
+@app.get("/api/relatorios/diario-classe", tags=["Relatórios Pedagógicos"])
+def get_relatorio_diario_classe(current_user: dict = Depends(get_current_user)):
+    """
+    #REL-02: Diário de Classe & Lançamento de Médias Bimestrais.
+    Classificação: Professores / Gestão (perfis permitidos: professor, gestor, diretor).
+    """
+    report = authorize_report_access("diario-classe", current_user)
+    return {
+        "status": "autorizado",
+        "relatorio": report,
+        "consultado_por": {
+            "nome": current_user["name"],
+            "email": current_user["email"],
+            "role": current_user["role"],
+        },
+        "gerado_em": datetime.now(timezone.utc).isoformat(),
+        "resumo": {
+            "bimestre_referencia": "4º Bimestre / 2026",
+            "turmas_com_notas_lancadas": "14 / 14",
+            "media_geral_bimestre": 8.4,
+            "estudantes_em_recuperacao": 27,
+        },
+        "colunas": ["Turma", "Componente Curricular", "Docente Responsável", "Aulas Dadas", "Média Turma", "Situação do Diário"],
+        "registros": [
+            {"turma": "9º Ano A (EF)", "disciplina": "Matemática", "professor": "Prof. Carlos Eduardo", "aulas": "48 / 50", "media": "8,5", "situacao": "Fechado"},
+            {"turma": "1ª Série B (EM)", "disciplina": "Língua Portuguesa", "professor": "Profa. Mariana Souza", "aulas": "46 / 48", "media": "8,2", "situacao": "Fechado"},
+            {"turma": "2ª Série A (EM)", "disciplina": "Física", "professor": "Prof. Roberto Lima", "aulas": "39 / 40", "media": "7,9", "situacao": "Em Revisão"},
+            {"turma": "3ª Série A (EM)", "disciplina": "História", "professor": "Profa. Fernanda Alves", "aulas": "40 / 40", "media": "8,8", "situacao": "Fechado"},
+            {"turma": "7º Ano C (EF)", "disciplina": "Ciências", "professor": "Prof. Carlos Eduardo", "aulas": "44 / 44", "media": "8,6", "situacao": "Fechado"},
+        ],
+        "observacoes_pedagogicas": [
+            "92,8% dos diários bimestrais já validados pelos docentes responsáveis.",
+            "Turma 2ª Série A (Física) aguarda lançamento final das atividades de recuperação contínua.",
+            "Dados sintéticos para demonstração pedagógica de acesso compartilhado (Professores / Gestão).",
+        ],
+    }
+
+
+@app.get("/api/relatorios/auditoria-matriculas", tags=["Relatórios Pedagógicos"])
+def get_relatorio_auditoria_matriculas(current_user: dict = Depends(get_current_user)):
+    """
+    #REL-03: Auditoria de Matrículas e Frequência Escolar.
+    Classificação: Exclusivo Diretoria (perfil permitido: diretor).
+    """
+    report = authorize_report_access("auditoria-matriculas", current_user)
+    return {
+        "status": "autorizado",
+        "relatorio": report,
+        "consultado_por": {
+            "nome": current_user["name"],
+            "email": current_user["email"],
+            "role": current_user["role"],
+        },
+        "gerado_em": datetime.now(timezone.utc).isoformat(),
+        "resumo": {
+            "matriculas_ativas": 486,
+            "vagas_remanescentes": 18,
+            "frequencia_global": "93,8%",
+            "alertas_busca_ativa": 9,
+        },
+        "colunas": ["Segmento", "Matrículas Ativas", "Transferências", "Frequência Média", "Alertas Busca Ativa", "Conformidade SED"],
+        "registros": [
+            {"segmento": "Ensino Fundamental II (6º ao 9º)", "ativas": 244, "transferencias": 6, "frequencia": "94,5%", "busca_ativa": 4, "conformidade": "100% Regular"},
+            {"segmento": "Ensino Médio Regular / Integral", "ativas": 242, "transferencias": 8, "frequencia": "93,1%", "busca_ativa": 5, "conformidade": "100% Regular"},
+        ],
+        "observacoes_pedagogicas": [
+            "Auditoria mensal sincronizada com a Secretaria Escolar Digital (SED) sem pendências documentais.",
+            "9 estudantes sinalizados para contato preventivo da Busca Ativa Escolar (frequência entre 76% e 81%).",
+            "Relatório estritamente restrito à Diretoria (HTTP 403 automático para demais perfis).",
+        ],
     }
 
 
@@ -403,7 +644,9 @@ def register_user(data: UserRegisterRequest):
     """
     email_clean = data.email.lower().strip()
     role_clean = data.role.lower().strip() if data.role else "professor"
-    if role_clean not in ["aluno", "professor", "gestor"]:
+    if role_clean == "diretoria":
+        role_clean = "diretor"
+    if role_clean not in ALLOWED_ROLES:
         role_clean = "professor"
 
     with get_db_connection() as conn:
@@ -454,12 +697,9 @@ def login_json(credentials: UserLoginRequest):
             detail="Informe e-mail e senha para realizar o login."
         )
 
-    identifier_clean = identifier.lower().strip()
-
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (identifier_clean,))
-        user = cursor.fetchone()
+        user = find_user_by_identifier(cursor, identifier)
 
         if not user or not verify_password(password, user["hashed_password"]):
             raise HTTPException(
@@ -473,27 +713,7 @@ def login_json(credentials: UserLoginRequest):
                 detail="Esta conta de usuário foi desativada pelo administrador."
             )
 
-        # Geração do JWT com ID e E-mail no payload
-        token_payload = {
-            "sub": str(user["id"]),
-            "email": user["email"],
-            "role": user["role"],
-            "name": user["name"]
-        }
-        token = create_access_token(token_payload)
-
-        return {
-            "access_token": token,
-            "token_type": "bearer",
-            "user": {
-                "id": user["id"],
-                "name": user["name"],
-                "email": user["email"],
-                "role": user["role"],
-                "is_active": bool(user["is_active"]),
-                "created_at": user["created_at"]
-            }
-        }
+        return build_token_response(user)
 
 
 @app.post("/auth/token", response_model=TokenResponse, tags=["Autenticação"])
@@ -502,12 +722,9 @@ def login_oauth2_form(form_data: OAuth2PasswordRequestForm = Depends()):
     Endpoint compatível com a especificação OAuth2 Password Flow.
     Permite autenticação direta pelo botão 'Authorize' da documentação Swagger (/docs).
     """
-    identifier_clean = form_data.username.lower().strip()
-
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE email = ?", (identifier_clean,))
-        user = cursor.fetchone()
+        user = find_user_by_identifier(cursor, form_data.username)
 
         if not user or not verify_password(form_data.password, user["hashed_password"]):
             raise HTTPException(
@@ -516,26 +733,13 @@ def login_oauth2_form(form_data: OAuth2PasswordRequestForm = Depends()):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        token_payload = {
-            "sub": str(user["id"]),
-            "email": user["email"],
-            "role": user["role"],
-            "name": user["name"]
-        }
-        token = create_access_token(token_payload)
+        if not user["is_active"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Esta conta de usuário foi desativada pelo administrador.",
+            )
 
-        return {
-            "access_token": token,
-            "token_type": "bearer",
-            "user": {
-                "id": user["id"],
-                "name": user["name"],
-                "email": user["email"],
-                "role": user["role"],
-                "is_active": bool(user["is_active"]),
-                "created_at": user["created_at"]
-            }
-        }
+        return build_token_response(user)
 
 
 @app.get("/auth/me", response_model=UserResponse, tags=["Autenticação"])
@@ -571,6 +775,10 @@ if __name__ == "__main__":
     print(" Escola do Futuro — EE Antonio Reginato")
     print(" Iniciando servidor FastAPI em http://127.0.0.1:8000")
     print(" Documentação Swagger: http://127.0.0.1:8000/docs")
-    print(" Credenciais de teste: admin@escola.sp.gov.br / admin123")
+    print(" Credenciais de teste:")
+    print("   - Gestor:    gestor@escola.sp.gov.br    / gestor123")
+    print("   - Professor: professor@escola.sp.gov.br / professor123")
+    print("   - Diretor:   diretor@escola.sp.gov.br   / diretor123")
+    print("   - Admin:     admin@escola.sp.gov.br     / admin123")
     print("=" * 60 + "\n")
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

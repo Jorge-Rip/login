@@ -35,11 +35,17 @@ python main.py
 
 ## 🔑 Credenciais Padrão para Teste
 
-Ao iniciar, o banco SQLite (`escola_auth.db`) é criado automaticamente com o administrador padrão:
+Ao iniciar, o banco SQLite (`escola_auth.db`) é criado/atualizado automaticamente com os perfis pedagógicos padrão para teste (também é possível digitar apenas o usuário curto no campo de login, como `gestor`, `professor` ou `diretor`):
 
-- **E-mail:** `admin@escola.sp.gov.br`
-- **Senha:** `admin123`
-- **Perfil:** Gestor / Coordenação
+| Perfil | Usuário (Login Curto) | E-mail Institucional | Senha | Relatórios Liberados |
+| :--- | :--- | :--- | :--- | :--- |
+| **Gestor** (`gestor`) | `gestor` | `
+
+
+` | `gestor123` | `#REL-01` (SARESP) e `#REL-02` (Diário de Classe) |
+| **Professor** (`professor`) | `professor` | `professor@escola.sp.gov.br` | `professor123` | `#REL-02` (Diário de Classe) |
+| **Diretor / Diretoria** (`diretor`) | `diretor` | `diretor@escola.sp.gov.br` | `diretor123` | `#REL-01`, `#REL-02` e `#REL-03` (Exclusivo Diretoria) |
+| **Admin / Coordenação** (`gestor`) | `admin` | `admin@escola.sp.gov.br` | `admin123` | `#REL-01` (SARESP) e `#REL-02` (Diário de Classe) |
 
 ---
 
@@ -48,9 +54,12 @@ Ao iniciar, o banco SQLite (`escola_auth.db`) é criado automaticamente com o ad
 | Método | Rota | Descrição | Segurança |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | Serve a interface web de login `index.html` | Pública |
-| `GET` | `/painel` | Serve a página de área restrita `painel.html` | Pública (validação no client/API) |
+| `GET` | `/painel` | Serve a página de área restrita `painel.html` com menu por relatório | Pública (validação no client/API) |
 | `GET` | `/painel-servidor` | Página restrita bloqueada diretamente pelo servidor | Requer `?token=...` |
-| `GET` | `/api/dados-restritos` | Retorna dados confidenciais (notas, turmas, relatórios) | `Bearer <JWT>` (401 se ausente) |
+| `GET` | `/api/dados-restritos` | Retorna dados confidenciais gerais e matriz de relatórios liberados para o perfil | `Bearer <JWT>` (401 se ausente) |
+| `GET` | `/api/relatorios/saresp` | `#REL-01`: Desempenho SARESP e Avaliações Diagnósticas 2026 | `Bearer <JWT>` + Perfil `gestor` ou `diretor` (403 caso contrário) |
+| `GET` | `/api/relatorios/diario-classe` | `#REL-02`: Diário de Classe & Lançamento de Médias Bimestrais | `Bearer <JWT>` + Perfil `professor`, `gestor` ou `diretor` (403 caso contrário) |
+| `GET` | `/api/relatorios/auditoria-matriculas` | `#REL-03`: Auditoria de Matrículas e Frequência Escolar | `Bearer <JWT>` + Perfil `diretor` (403 caso contrário) |
 | `GET` | `/auth/health` | Healthcheck de monitoramento do backend | Pública |
 | `POST` | `/auth/register` | Criação de nova conta (Nome, Email, Perfil, Senha) | Pública |
 | `POST` | `/auth/login` | Login via JSON retornando JWT Token e Perfil | Pública |
@@ -62,16 +71,19 @@ Ao iniciar, o banco SQLite (`escola_auth.db`) é criado automaticamente com o ad
 
 ## 🎓 Demonstração Pedagógica: Autorizado vs. Acesso Negado
 
-A aplicação foi desenhada especificamente para ilustrar os conceitos de segurança web:
+A aplicação foi desenhada especificamente para ilustrar os conceitos de segurança web (Autenticação `401` e Autorização RBAC `403`):
 
-1. **Acesso Negado (HTTP 401 Unauthorized):**
+1. **Acesso Negado por Falta de Autenticação (HTTP 401 Unauthorized):**
    - Acesse diretamente no navegador: `http://127.0.0.1:8000/painel` sem estar logado.
    - A página detecta a ausência do token, aciona o backend e exibe a tela vermelha de **Acesso Negado**, explicando didaticamente por que a rota foi bloqueada e mostrando o JSON real retornado pelo FastAPI.
 
-2. **Acesso Autorizado (HTTP 200 OK):**
-   - Acesse `http://127.0.0.1:8000` e efetue o login.
-   - No painel inicial, clique em **"Acessar Área Restrita (Com Permissão Autorizada)"**.
-   - A página `painel.html` envia o cabeçalho `Authorization: Bearer <token>`, o FastAPI valida a assinatura criptográfica e desbloqueia os dados sigilosos da escola.
+2. **Acesso Autorizado e Menu Específico por Perfil (HTTP 200 OK vs HTTP 403 Forbidden):**
+   - Acesse `http://127.0.0.1:8000` e efetue login com `professor`, `gestor` ou `diretor`.
+   - No painel (`/painel`), utilize o **Menu de Chamadas por Perfil** para consultar os relatórios `#REL-01` (`/api/relatorios/saresp`), `#REL-02` (`/api/relatorios/diario-classe`) e `#REL-03` (`/api/relatorios/auditoria-matriculas`).
+   - Cada chamada envia o cabeçalho `Authorization: Bearer <token>`, o FastAPI executa `decode_access_token()` e valida o campo `role` do usuário:
+     - **Professor** acessa `#REL-02` (HTTP 200) e recebe bloqueio **HTTP 403** em `#REL-01` e `#REL-03`.
+     - **Gestor** acessa `#REL-01` e `#REL-02` (HTTP 200) e recebe bloqueio **HTTP 403** em `#REL-03` (Exclusivo Diretoria).
+     - **Diretor** acessa todos os três relatórios (`#REL-01`, `#REL-02` e `#REL-03`) com **HTTP 200**.
 
 3. **Simulação Interativa de Revogação de Token:**
    - Na página restrita autorizada, clique no botão **"Simular Negação (Apagar Token e Recarregar)"** para ver a mudança de estado em tempo real.
@@ -251,5 +263,29 @@ Quais relatórios e exportações são necessários e para quais perfis?
 16. Limites da fonte e observações finais
 A imagem permite identificar os campos e as sete situações listadas, mas não informa regras de negócio, permissões, estados do processo, política de retenção, formato de assinatura, estrutura atual do banco ou contratos dos endpoints FastAPI. Por isso, este documento separa o que está explícito no formulário das propostas técnicas. O agente de IA deve tratar as propostas como orientação inicial e confirmar decisões institucionais antes de torná-las obrigatórias.
 Princípio central: evoluir a aplicação existente com o menor impacto possível, preservando a rastreabilidade do registro e garantindo acesso restrito e responsável às informações dos estudantes.
+prompt
 
-TESTE
+Turmas Ativas14 SalasEnsino Fundamental e Médio
+Documentos Restritos Desbloqueados para este Perfil:
+Código
+Documento Sigiloso
+Classificação
+Status
+#REL-01
+Desempenho SARESP e Avaliações Diagnósticas 2026
+Restrito à Gestão
+Disponível
+#REL-02
+Diário de Classe & Lançamento de Médias Bimestrais
+Professores / Gestão
+Disponível
+#REL-03
+Auditoria de Matrículas e Frequência Escolar
+Exclusivo Diretoria
+Disponível
+Como a Permissão Foi Validada Tecnologicamente?
+O frontend enviou o cabeçalho HTTP:Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5c...m1fvknF4Zo
+O FastAPI executou decode_access_token() conferindo a assinatura HMAC-SHA256 e o prazo de expiração.
+Simular Negação (Apagar Token e Recarregar)[Voltar ao Portal Inicial](http://127.0.0.1:8000/)Encerrar Sessão
+
+o texto acima se refere a um exemplo pedagógico para consulta de três tipos de usuarios: gestor, professor/gestor e diretoria. Implemente na aplicação esses três relatórios hipotéticos inclusive o menu expecífico para cada chamada. Crie os usuários: gestor, professor, diretor com suas respectivas senhas de acesso e informe os dados no redme.md
