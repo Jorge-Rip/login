@@ -405,6 +405,159 @@
             color: var(--sf-brand-blue);
         }
 
+        .tag-pill.red {
+            background-color: var(--sf-accent-red-bg);
+            color: #991b1b;
+        }
+
+        /* Menu específico para cada chamada de relatório */
+        .report-nav-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+
+        .report-nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            padding: 12px 14px;
+            background-color: #f8fafc;
+            border: 1px solid var(--sf-border-color);
+            border-radius: var(--sf-radius-md);
+            cursor: pointer;
+            text-align: left;
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition-fast);
+        }
+
+        .report-nav-btn:hover {
+            border-color: var(--sf-accent-blue);
+            background-color: #f0f9ff;
+        }
+
+        .report-nav-btn.active {
+            background-color: var(--sf-active-bg);
+            border-color: var(--sf-brand-blue);
+            box-shadow: var(--sf-shadow-sm);
+        }
+
+        .report-nav-btn.locked {
+            border-style: dashed;
+        }
+
+        .report-nav-code {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: var(--sf-brand-blue);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .report-nav-label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--sf-text-dark);
+            line-height: 1.3;
+        }
+
+        .report-nav-endpoint {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.7rem;
+            color: var(--sf-text-muted);
+        }
+
+        .btn-table-action {
+            padding: 6px 10px;
+            border-radius: var(--sf-radius-sm);
+            border: 1px solid var(--sf-border-color);
+            background-color: #ffffff;
+            color: var(--sf-brand-blue);
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            white-space: nowrap;
+        }
+
+        .btn-table-action:hover {
+            background-color: var(--sf-active-bg);
+            border-color: var(--sf-accent-blue);
+        }
+
+        .btn-table-action.restricted {
+            color: var(--sf-accent-red);
+            border-color: var(--sf-accent-red-border);
+            background-color: var(--sf-accent-red-bg);
+        }
+
+        .report-viewer-card {
+            background-color: #ffffff;
+            border: 1px solid var(--sf-border-color);
+            border-radius: var(--sf-radius-md);
+            padding: 20px 22px;
+            margin-bottom: 24px;
+            box-shadow: var(--sf-shadow-sm);
+            animation: fadeIn 0.25s ease;
+        }
+
+        .report-viewer-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-bottom: 14px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--sf-border-color);
+        }
+
+        .report-viewer-header h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            color: var(--sf-text-primary);
+            margin-top: 4px;
+        }
+
+        .report-notes-list {
+            margin: 14px 0 0;
+            padding-left: 18px;
+            font-size: 0.84rem;
+            color: var(--sf-text-dark);
+            line-height: 1.55;
+        }
+
+        .report-notes-list li {
+            margin-bottom: 4px;
+        }
+
+        .rbac-denied-box {
+            background-color: var(--sf-accent-red-bg);
+            border: 1px solid var(--sf-accent-red-border);
+            border-radius: var(--sf-radius-md);
+            padding: 18px 20px;
+            margin-bottom: 24px;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .rbac-denied-box h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            color: #991b1b;
+            margin-bottom: 6px;
+        }
+
+        .rbac-denied-box p {
+            font-size: 0.88rem;
+            color: #7f1d1d;
+            line-height: 1.45;
+        }
+
         /* Ações e Botões Didáticos */
         .action-row {
             display: flex;
@@ -613,7 +766,7 @@
                     <div class="data-card">
                         <span class="data-card-label">Perfil de Acesso</span>
                         <span class="data-card-value" id="dispUserRole" style="color: var(--sf-brand-blue); text-transform: capitalize;">Gestor</span>
-                        <span class="data-card-sub">Permissão Total do Sistema</span>
+                        <span class="data-card-sub" id="dispUserRolePerm">Permissão de Gestão</span>
                     </div>
                     <div class="data-card">
                         <span class="data-card-label">Média Geral EE Reginato</span>
@@ -626,6 +779,48 @@
                         <span class="data-card-sub">Ensino Fundamental e Médio</span>
                     </div>
                 </div>
+
+                <!-- Menu Específico para cada Chamada de Relatório -->
+                <div class="pedagogical-title">
+                    <i class="fa-solid fa-bars-staggered"></i> Menu de Chamadas por Perfil (Endpoints RBAC):
+                </div>
+                <nav class="report-nav-menu" id="reportNavMenu" aria-label="Menu de Relatórios">
+                    <button type="button" class="report-nav-btn active" data-report="overview">
+                        <span class="report-nav-code">
+                            <span>VISÃO GERAL</span>
+                            <i class="fa-solid fa-house"></i>
+                        </span>
+                        <span class="report-nav-label">Painel Consolidado</span>
+                        <span class="report-nav-endpoint">GET /api/dados-restritos</span>
+                    </button>
+                    <button type="button" class="report-nav-btn" data-report="saresp">
+                        <span class="report-nav-code">
+                            <span>#REL-01</span>
+                            <i class="fa-solid fa-lock" id="navIcon-saresp"></i>
+                        </span>
+                        <span class="report-nav-label">SARESP 2026 (Gestão)</span>
+                        <span class="report-nav-endpoint">GET /api/relatorios/saresp</span>
+                    </button>
+                    <button type="button" class="report-nav-btn" data-report="diario-classe">
+                        <span class="report-nav-code">
+                            <span>#REL-02</span>
+                            <i class="fa-solid fa-lock" id="navIcon-diario-classe"></i>
+                        </span>
+                        <span class="report-nav-label">Diário de Classe (Prof./Gestão)</span>
+                        <span class="report-nav-endpoint">GET /api/relatorios/diario-classe</span>
+                    </button>
+                    <button type="button" class="report-nav-btn" data-report="auditoria-matriculas">
+                        <span class="report-nav-code">
+                            <span>#REL-03</span>
+                            <i class="fa-solid fa-lock" id="navIcon-auditoria-matriculas"></i>
+                        </span>
+                        <span class="report-nav-label">Auditoria Matrículas (Diretoria)</span>
+                        <span class="report-nav-endpoint">GET /api/relatorios/auditoria-matriculas</span>
+                    </button>
+                </nav>
+
+                <!-- Área Dinâmica do Relatório Selecionado -->
+                <div id="reportDetailContainer" style="display: none;"></div>
 
                 <!-- Tabela de Documentos Restritos Liberados -->
                 <div class="pedagogical-title">
@@ -640,26 +835,12 @@
                                 <th>Documento Sigiloso</th>
                                 <th>Classificação</th>
                                 <th>Status</th>
+                                <th>Chamada</th>
                             </tr>
                         </thead>
                         <tbody id="reportsTableBody">
                             <tr>
-                                <td>#REL-01</td>
-                                <td>Desempenho SARESP e Avaliações Diagnósticas 2026</td>
-                                <td><span class="tag-pill blue">Restrito à Gestão</span></td>
-                                <td><span class="tag-pill green">Disponível</span></td>
-                            </tr>
-                            <tr>
-                                <td>#REL-02</td>
-                                <td>Diário de Classe & Lançamento de Médias Bimestrais</td>
-                                <td><span class="tag-pill blue">Professores / Gestão</span></td>
-                                <td><span class="tag-pill green">Disponível</span></td>
-                            </tr>
-                            <tr>
-                                <td>#REL-03</td>
-                                <td>Auditoria de Matrículas e Frequência Escolar</td>
-                                <td><span class="tag-pill blue">Exclusivo Diretoria</span></td>
-                                <td><span class="tag-pill green">Disponível</span></td>
+                                <td colspan="5" style="text-align: center; color: var(--sf-text-muted);">Carregando permissões...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -683,6 +864,12 @@
                             <i class="fa-solid fa-microchip"></i>
                             <div>
                                 O FastAPI executou <code>decode_access_token()</code> conferindo a assinatura HMAC-SHA256 e o prazo de expiração.
+                            </div>
+                        </li>
+                        <li>
+                            <i class="fa-solid fa-user-shield"></i>
+                            <div id="rbacValidationText">
+                                Endpoint consultado: <code>GET /api/dados-restritos</code> — Controle RBAC ativo por perfil do usuário.
                             </div>
                         </li>
                     </ul>
@@ -728,11 +915,38 @@
             const dispUserName = document.getElementById('dispUserName');
             const dispUserEmail = document.getElementById('dispUserEmail');
             const dispUserRole = document.getElementById('dispUserRole');
+            const dispUserRolePerm = document.getElementById('dispUserRolePerm');
             const headerDebugText = document.getElementById('headerDebugText');
+            const rbacValidationText = document.getElementById('rbacValidationText');
+            const reportsTableBody = document.getElementById('reportsTableBody');
+            const reportNavMenu = document.getElementById('reportNavMenu');
+            const reportDetailContainer = document.getElementById('reportDetailContainer');
 
             const retryFetchBtn = document.getElementById('retryFetchBtn');
             const simulateRevokeBtn = document.getElementById('simulateRevokeBtn');
             const logoutFromPainelBtn = document.getElementById('logoutFromPainelBtn');
+
+            const REPORT_ENDPOINTS = {
+                'saresp': '/api/relatorios/saresp',
+                'diario-classe': '/api/relatorios/diario-classe',
+                'auditoria-matriculas': '/api/relatorios/auditoria-matriculas'
+            };
+
+            const ROLE_DESCRIPTIONS = {
+                'gestor': 'Acesso Gestão (#REL-01 e #REL-02)',
+                'professor': 'Acesso Docente (#REL-02)',
+                'diretor': 'Acesso Total e Exclusivo Diretoria (#REL-01, #REL-02, #REL-03)',
+                'aluno': 'Acesso Estudante (Sem relatórios administrativos)'
+            };
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
 
             function getStoredToken() {
                 try {
@@ -771,6 +985,187 @@
                 rawErrorOutput.textContent = JSON.stringify(debugJson, null, 2);
             }
 
+            function setActiveMenuButton(slug) {
+                reportNavMenu.querySelectorAll('.report-nav-btn').forEach((btn) => {
+                    btn.classList.toggle('active', btn.getAttribute('data-report') === slug);
+                });
+            }
+
+            function renderReportsTableAndMenu(relatorios) {
+                if (!Array.isArray(relatorios) || relatorios.length === 0) {
+                    reportsTableBody.innerHTML = '<tr><td colspan="5">Nenhum relatório configurado.</td></tr>';
+                    return;
+                }
+
+                reportsTableBody.innerHTML = relatorios.map((rel) => {
+                    const statusClass = rel.permitido ? 'green' : 'red';
+                    const btnClass = rel.permitido ? 'btn-table-action' : 'btn-table-action restricted';
+                    const btnLabel = rel.permitido ? 'Consultar Relatório' : 'Testar Bloqueio (403)';
+
+                    const navIcon = document.getElementById('navIcon-' + rel.slug);
+                    const navBtn = reportNavMenu.querySelector('[data-report="' + rel.slug + '"]');
+                    if (navIcon) {
+                        navIcon.className = rel.permitido ? 'fa-solid fa-lock-open' : 'fa-solid fa-lock';
+                        navIcon.style.color = rel.permitido ? 'var(--sf-success-green)' : 'var(--sf-accent-red)';
+                    }
+                    if (navBtn) {
+                        navBtn.classList.toggle('locked', !rel.permitido);
+                    }
+
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(rel.codigo)}</strong></td>
+                            <td>${escapeHtml(rel.titulo)}</td>
+                            <td><span class="tag-pill blue">${escapeHtml(rel.classificacao)}</span></td>
+                            <td><span class="tag-pill ${statusClass}">${escapeHtml(rel.status)}</span></td>
+                            <td>
+                                <button type="button" class="${btnClass}" data-open-report="${escapeHtml(rel.slug)}">
+                                    ${btnLabel}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                reportsTableBody.querySelectorAll('[data-open-report]').forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        const slug = btn.getAttribute('data-open-report');
+                        loadReport(slug);
+                    });
+                });
+            }
+
+            function renderReportSuccess(payload, endpoint) {
+                const rel = payload.relatorio || {};
+                const resumoEntries = Object.entries(payload.resumo || {});
+                const colunas = payload.colunas || [];
+                const registros = payload.registros || [];
+                const notas = payload.observacoes_pedagogicas || [];
+
+                const summaryHtml = resumoEntries.map(([key, val]) => `
+                    <div class="data-card">
+                        <span class="data-card-label">${escapeHtml(key.replace(/_/g, ' '))}</span>
+                        <span class="data-card-value" style="font-size: 1.15rem;">${escapeHtml(val)}</span>
+                    </div>
+                `).join('');
+
+                const headersHtml = colunas.map((col) => `<th>${escapeHtml(col)}</th>`).join('');
+                const rowsHtml = registros.map((row) => {
+                    const cells = Object.values(row).map((val) => `<td>${escapeHtml(val)}</td>`).join('');
+                    return `<tr>${cells}</tr>`;
+                }).join('');
+
+                const notesHtml = notas.map((nota) => `<li>${escapeHtml(nota)}</li>`).join('');
+
+                reportDetailContainer.style.display = 'block';
+                reportDetailContainer.innerHTML = `
+                    <div class="report-viewer-card">
+                        <div class="report-viewer-header">
+                            <div>
+                                <span class="tag-pill green">${escapeHtml(rel.codigo)} • HTTP 200 OK</span>
+                                <span class="tag-pill blue" style="margin-left: 6px;">${escapeHtml(rel.classificacao)}</span>
+                                <h3>${escapeHtml(rel.titulo)}</h3>
+                                <p style="font-size: 0.82rem; color: var(--sf-text-muted); margin-top: 4px;">
+                                    ${escapeHtml(rel.descricao)}
+                                </p>
+                            </div>
+                            <span style="font-size: 0.76rem; color: var(--sf-text-muted);">
+                                Endpoint: <code>${escapeHtml(endpoint)}</code>
+                            </span>
+                        </div>
+                        <div class="data-grid" style="margin-bottom: 16px;">${summaryHtml}</div>
+                        <div class="reports-table-container" style="margin-bottom: 14px;">
+                            <table class="reports-table">
+                                <thead><tr>${headersHtml}</tr></thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>
+                        <div style="font-size: 0.82rem; font-weight: 700; color: var(--sf-text-primary);">
+                            Observações Pedagógicas:
+                        </div>
+                        <ul class="report-notes-list">${notesHtml}</ul>
+                        <details style="margin-top: 14px;">
+                            <summary style="cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--sf-brand-blue);">
+                                Inspecionar JSON retornado pelo FastAPI
+                            </summary>
+                            <pre class="code-inspector">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+                        </details>
+                    </div>
+                `;
+
+                rbacValidationText.innerHTML = `Endpoint consultado: <code>GET ${escapeHtml(endpoint)}</code> — Perfil autorizado (<strong>HTTP 200 OK</strong>).`;
+            }
+
+            function renderReportForbidden(errorPayload, statusCode, endpoint) {
+                const detail = errorPayload && errorPayload.detail ? errorPayload.detail : errorPayload;
+                const message = typeof detail === 'object' && detail.mensagem
+                    ? detail.mensagem
+                    : 'Este perfil não tem permissão para consultar o relatório solicitado.';
+
+                reportDetailContainer.style.display = 'block';
+                reportDetailContainer.innerHTML = `
+                    <div class="rbac-denied-box">
+                        <h3>⛔ Acesso Negado ao Relatório (HTTP ${escapeHtml(statusCode)})</h3>
+                        <p>${escapeHtml(message)}</p>
+                        <pre class="code-inspector">${escapeHtml(JSON.stringify({
+                            endpoint_chamado: endpoint,
+                            status_http: statusCode,
+                            resposta_fastapi: errorPayload
+                        }, null, 2))}</pre>
+                    </div>
+                `;
+
+                rbacValidationText.innerHTML = `Endpoint consultado: <code>GET ${escapeHtml(endpoint)}</code> — Bloqueio RBAC aplicado (<strong>HTTP ${escapeHtml(statusCode)}</strong>).`;
+            }
+
+            async function loadReport(slug) {
+                if (slug === 'overview') {
+                    setActiveMenuButton('overview');
+                    reportDetailContainer.style.display = 'none';
+                    reportDetailContainer.innerHTML = '';
+                    rbacValidationText.innerHTML = 'Endpoint consultado: <code>GET /api/dados-restritos</code> — Controle RBAC ativo por perfil do usuário.';
+                    return;
+                }
+
+                const endpoint = REPORT_ENDPOINTS[slug];
+                const token = getStoredToken();
+                if (!endpoint || !token) return;
+
+                setActiveMenuButton(slug);
+                reportDetailContainer.style.display = 'block';
+                reportDetailContainer.innerHTML = `
+                    <div class="report-viewer-card" style="text-align: center; padding: 28px;">
+                        <i class="fa-solid fa-spinner fa-spin" style="color: var(--sf-accent-blue); font-size: 1.4rem;"></i>
+                        <p style="margin-top: 8px; font-size: 0.86rem; color: var(--sf-text-muted);">
+                            Chamando <code>GET ${escapeHtml(endpoint)}</code> com Bearer Token...
+                        </p>
+                    </div>
+                `;
+
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (response.status === 401) {
+                        showDeniedView(payload, 401);
+                        return;
+                    }
+                    if (response.ok) {
+                        renderReportSuccess(payload, endpoint);
+                    } else {
+                        renderReportForbidden(payload, response.status, endpoint);
+                    }
+                } catch (err) {
+                    renderReportForbidden({ detail: 'Erro de conexão com o servidor FastAPI.' }, 500, endpoint);
+                }
+            }
+
             // Exibe a tela de ACESSO AUTORIZADO
             function showGrantedView(data, token) {
                 loadingState.style.display = 'none';
@@ -782,17 +1177,35 @@
                 statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> HTTP 200 Autorizado';
 
                 if (data && data.usuario) {
+                    const role = (data.usuario.role || 'Membro').toLowerCase();
                     dispUserName.textContent = data.usuario.nome || data.usuario.name || 'Usuário';
                     dispUserEmail.textContent = data.usuario.email || '';
                     dispUserRole.textContent = data.usuario.role || 'Membro';
+                    dispUserRolePerm.textContent = ROLE_DESCRIPTIONS[role] || 'Acesso autenticado';
                     grantedWelcomeText.textContent = `Olá, ${data.usuario.nome || 'Membro'}! Sua permissão foi validada com sucesso pelo backend FastAPI.`;
+                }
+
+                if (data && data.dados_sigilosos && data.dados_sigilosos.relatorios) {
+                    renderReportsTableAndMenu(data.dados_sigilosos.relatorios);
                 }
 
                 if (token) {
                     const tokenPreview = token.length > 25 ? token.substring(0, 25) + '...' + token.substring(token.length - 10) : token;
                     headerDebugText.textContent = 'Authorization: Bearer ' + tokenPreview;
                 }
+
+                const params = new URLSearchParams(window.location.search);
+                const requestedReport = params.get('relatorio');
+                if (requestedReport && REPORT_ENDPOINTS[requestedReport]) {
+                    loadReport(requestedReport);
+                }
             }
+
+            reportNavMenu.querySelectorAll('.report-nav-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    loadReport(btn.getAttribute('data-report'));
+                });
+            });
 
             // Validação de Acesso contra o Backend FastAPI
             async function verifyAccess() {

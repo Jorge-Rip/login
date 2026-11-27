@@ -518,6 +518,128 @@
             background-color: #fecaca;
         }
 
+        /* Acesso rápido de perfis pedagógicos */
+        .quick-profiles {
+            margin-top: 14px;
+            padding: 12px;
+            background-color: #f8fafc;
+            border: 1px solid var(--sf-border-color);
+            border-radius: var(--sf-radius-md);
+        }
+
+        .quick-profiles-title {
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--sf-text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quick-profiles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .quick-profile-btn {
+            padding: 7px 8px;
+            border: 1px solid var(--sf-border-color);
+            border-radius: var(--sf-radius-sm);
+            background-color: #ffffff;
+            color: var(--sf-brand-blue);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .quick-profile-btn:hover {
+            background-color: var(--sf-active-bg);
+            border-color: var(--sf-accent-blue);
+        }
+
+        .quick-profile-btn small {
+            font-size: 0.66rem;
+            font-weight: 500;
+            color: var(--sf-text-muted);
+        }
+
+        /* Menu específico de relatórios no card autenticado */
+        .report-menu-box {
+            margin: 14px 0 4px;
+            padding: 12px;
+            background-color: #f8fafc;
+            border: 1px solid var(--sf-border-color);
+            border-radius: var(--sf-radius-md);
+            text-align: left;
+        }
+
+        .report-menu-title {
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--sf-text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .report-menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .report-menu-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: var(--sf-radius-sm);
+            background-color: #ffffff;
+            border: 1px solid var(--sf-border-color);
+            text-decoration: none;
+            color: var(--sf-text-dark);
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: var(--transition-fast);
+        }
+
+        .report-menu-link:hover {
+            border-color: var(--sf-accent-blue);
+            background-color: var(--sf-active-bg);
+        }
+
+        .report-menu-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: var(--sf-radius-pill);
+            white-space: nowrap;
+        }
+
+        .report-menu-badge.allowed {
+            background-color: var(--sf-success-green-bg);
+            color: #065f46;
+        }
+
+        .report-menu-badge.restricted {
+            background-color: var(--sf-accent-red-bg);
+            color: #991b1b;
+        }
+
         /* Rodapé */
         .card-footer {
             background-color: #f8fafc;
@@ -653,6 +775,27 @@
                             <span id="loginSubmitText">Entrar no Sistema</span>
                         </button>
 
+                        <!-- Acesso Rápido: Perfis Pedagógicos -->
+                        <div class="quick-profiles">
+                            <div class="quick-profiles-title">
+                                <i class="fa-solid fa-users-gear"></i> Preencher Usuário de Teste:
+                            </div>
+                            <div class="quick-profiles-grid">
+                                <button type="button" class="quick-profile-btn" data-email="gestor@escola.sp.gov.br" data-pass="gestor123">
+                                    <span>Gestor</span>
+                                    <small>gestor123</small>
+                                </button>
+                                <button type="button" class="quick-profile-btn" data-email="professor@escola.sp.gov.br" data-pass="professor123">
+                                    <span>Professor</span>
+                                    <small>professor123</small>
+                                </button>
+                                <button type="button" class="quick-profile-btn" data-email="diretor@escola.sp.gov.br" data-pass="diretor123">
+                                    <span>Diretor</span>
+                                    <small>diretor123</small>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Demonstração Pedagógica: Tentativa de Acesso Direto sem Login -->
                         <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--sf-border-color); text-align: center;">
                             <a href="/painel" target="_blank" style="color: var(--sf-accent-red); font-size: 0.8rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
@@ -703,8 +846,9 @@
                                 <div class="input-wrapper">
                                     <select id="regRole" name="role" class="form-select">
                                         <option value="professor">Professor</option>
-                                        <option value="aluno">Aluno</option>
                                         <option value="gestor">Gestor / Coordenação</option>
+                                        <option value="diretor">Diretor / Diretoria</option>
+                                        <option value="aluno">Aluno</option>
                                     </select>
                                     <i class="fa-solid fa-id-badge input-icon"></i>
                                 </div>
@@ -788,6 +932,26 @@
                         <div class="detail-item-value" id="userTokenDisplay" style="font-family: monospace; font-size: 0.8rem;">
                             Token JWT Válido
                         </div>
+                    </div>
+                </div>
+
+                <div class="report-menu-box">
+                    <div class="report-menu-title">
+                        <i class="fa-solid fa-folder-tree"></i> Menu de Relatórios Pedagógicos
+                    </div>
+                    <div class="report-menu-list" id="dashboardReportMenu">
+                        <a href="/painel?relatorio=saresp" class="report-menu-link" data-roles="gestor,diretor">
+                            <span>#REL-01 • SARESP 2026</span>
+                            <span class="report-menu-badge">Restrito à Gestão</span>
+                        </a>
+                        <a href="/painel?relatorio=diario-classe" class="report-menu-link" data-roles="professor,gestor,diretor">
+                            <span>#REL-02 • Diário de Classe</span>
+                            <span class="report-menu-badge">Professores / Gestão</span>
+                        </a>
+                        <a href="/painel?relatorio=auditoria-matriculas" class="report-menu-link" data-roles="diretor">
+                            <span>#REL-03 • Auditoria Matrículas</span>
+                            <span class="report-menu-badge">Exclusivo Diretoria</span>
+                        </a>
                     </div>
                 </div>
 
@@ -1010,6 +1174,20 @@
                 if (token) {
                     userTokenDisplay.textContent = token.substring(0, 16) + '...' + token.substring(token.length - 8);
                 }
+
+                const currentRole = (user.role || '').toLowerCase();
+                document.querySelectorAll('#dashboardReportMenu .report-menu-link').forEach((link) => {
+                    const allowed = (link.getAttribute('data-roles') || '').split(',');
+                    const badge = link.querySelector('.report-menu-badge');
+                    if (!badge) return;
+                    if (allowed.includes(currentRole)) {
+                        badge.className = 'report-menu-badge allowed';
+                        badge.textContent = 'Disponível';
+                    } else {
+                        badge.className = 'report-menu-badge restricted';
+                        badge.textContent = 'Restrito (403)';
+                    }
+                });
             }
 
             // Renderizar Modo Não-Autenticado
@@ -1225,10 +1403,20 @@
                 showFeedback('info', 'Sessão encerrada com sucesso.');
             });
 
+            // Botões de preenchimento rápido dos perfis pedagógicos
+            document.querySelectorAll('.quick-profile-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    loginEmail.value = btn.getAttribute('data-email') || '';
+                    loginPassword.value = btn.getAttribute('data-pass') || '';
+                    clearFeedback();
+                    showFeedback('info', 'Credenciais preenchidas para ' + btn.querySelector('span').textContent + '. Clique em "Entrar no Sistema".');
+                });
+            });
+
             // Link "Esqueceu a senha?"
             forgotPasswordLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                showFeedback('info', 'Para redefinição de senha, solicite ao administrador da EE Antonio Reginato ou use o usuário padrão admin@escola.sp.gov.br / admin123.');
+                showFeedback('info', 'Usuários de teste: gestor@escola.sp.gov.br (gestor123), professor@escola.sp.gov.br (professor123) e diretor@escola.sp.gov.br (diretor123).');
             });
 
             // Inicialização ao carregar a página
